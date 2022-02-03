@@ -1,54 +1,79 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import ReactDOM from "react-dom";
-import * as actions from "./store/actions";
-import { initiateStore } from "./store/store";
+import { Provider, useSelector, useDispatch } from "react-redux";
+import { getError } from "./store/errors";
+import createStore from "./store/store";
+import {
+  completeTask,
+  getTasksLoadingStatus,
+  getTasks,
+  loadTasks,
+  taskDeleted,
+  createTask,
+  titleChanged,
+} from "./store/task";
 
-const store = initiateStore();
+const store = createStore();
 
-const App = (params) => {
-  const [state, setState] = useState(store.getState());
-
-  useEffect(() => {
-    store.subscribe(() => {
-      setState(store.getState());
-    });
-  }, []);
-
-  const completeTask = (taskId) => {
-    store.dispatch(actions.taskCompleted(taskId));
-  };
+const App = () => {
+  const state = useSelector(getTasks());
+  const isLoading = useSelector(getTasksLoadingStatus());
+  const error = useSelector(getError());
+  const dispatch = useDispatch();
 
   const changeTitle = (taskId) => {
-    store.dispatch(actions.titleChanged(taskId));
+    dispatch(titleChanged(taskId));
   };
 
   const deleteTask = (taskId) => {
-    store.dispatch(actions.taskDeleted(taskId));
+    dispatch(taskDeleted(taskId));
   };
+
+  const payload = {
+    title: "new task",
+    completed: false,
+  };
+
+  useEffect(() => {
+    dispatch(loadTasks());
+  }, []);
+
+  if (isLoading) {
+    return <h1>Loading...</h1>;
+  }
+
+  if (error) {
+    console.log(error);
+    return <p>{error}</p>;
+  }
 
   return (
     <>
-      <h1>App</h1>
-
+      <h1>APP</h1>
       <ul>
         {state.map((el) => (
           <li key={el.id}>
-            <p>{el.title}</p>
-            <p>{`Complited: ${el.complited}`}</p>
-            <button onClick={() => completeTask(el.id)}>Complete</button>
-            <button onClick={() => changeTitle(el.id)}>Change title</button>
-            <button onClick={() => deleteTask(el.id)}>Delete task</button>
+            <p>{`${el.id}. ${el.title}`}</p>
+            <p>{`Completed: ${el.completed}`}</p>
+            <button onClick={() => dispatch(completeTask(el.id))}>
+              Complete
+            </button>
+            <button onClick={() => changeTitle(el.id)}>Change Title</button>
+            <button onClick={() => deleteTask(el.id)}>Delete Task</button>
             <hr />
           </li>
         ))}
       </ul>
+      <button onClick={() => dispatch(createTask(payload))}>Create Task</button>
     </>
   );
 };
 
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <Provider store={store}>
+      <App />
+    </Provider>
   </React.StrictMode>,
   document.getElementById("root")
 );
